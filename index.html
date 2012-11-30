@@ -21,8 +21,8 @@
 	border:1px solid black;
 	height:200px;
 	width:200px;">
-		<div id="chatWindow" style="border:1px solid black;height:30px;width:180px;"></div>
-		<textarea id="chatText" rows="4" cols="20"></textarea>
+		<div id="chatWindow" style="border:1px solid black;height:135px;width:196px;"></div>
+		<textarea id="chatText" rows="4" cols="25" style="position:relative;"></textarea>
 	</div>
 	<br />
     <div id="content"></div>
@@ -43,7 +43,7 @@
 					});
 				});
 				
-	      var socket = new io.connect('http://localhost');
+	      var socket = new io.connect('10.242.11.250');
 	      window.socket = socket
 	      var content = $('#content');
 
@@ -98,7 +98,7 @@
 					socket.json.send(msg);
 					$("input[name=chatTxt]").val("");
 				});
-				$("#translationWindow").on("keydown", function(e) {
+				$("#chatText").on("keydown", function(e) {
 			    if (e.keyCode == 13) {
 		        var text = $("#chatText").val();
 		        var msg = {
@@ -107,6 +107,7 @@
 		        	from : blake.from
 		        }
 			    	socket.json.emit("privateMessage", msg);
+			    	$(this).val("")
 			    }
 				})
     	});

@@ -1,11 +1,12 @@
 var app = require('http').createServer(handler)
   , io = require('socket.io').listen(app)
-  , fs = require('fs');
+  , fs = require('fs')
+  , request = require('request');
 
 var port = process.env.PORT || 5000;
 console.log("Listening on " + port);
  
-app.listen(port);
+app.listen(port, "10.242.11.250");
 
 function handler (req, res) {
   fs.readFile(__dirname + '/index.html',
@@ -49,7 +50,11 @@ io.sockets.on('connection', function (client) {
 			redis2.publish("emrchat",msg.message);	
 		}
 		else if(msg.type == "setUsername"){
-			users[msg.user] = client.id
+			users[msg.user] = {
+				clientId :client.id,
+				clientIP : client.handshake.address.address
+			}
+			console.log(users)
 			redis3.sadd("onlineUsers",msg.user);
 			client.broadcast.emit("updateBuddyList", msg.user)
 			redis3.smembers("onlineUsers", function(err, members) {
@@ -58,8 +63,17 @@ io.sockets.on('connection', function (client) {
 		}
     });
     client.on("privateMessage", function(message) {
-    	var socketId = users[message.to]
+    	console.log(users[message.to])
+			var socketId = users[message.to]['clientId']
+    	var senderIP = users[message.to]['clientIP']
+    	console.log(senderIP)
     	io.sockets.socket(socketId).emit("privateMessage", message)
+    	var url = "http://" + senderIP + ":4567/say/" + message.text;
+    	request.get({
+    		url : url,
+  		}, function(error) {
+  			console.log(error);
+  		})
     })
     client.on('disconnect', function() {
         redis1.quit();
