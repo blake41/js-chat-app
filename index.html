@@ -2,8 +2,9 @@
 <head>
     <title>EmrChat</title>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
-</head>
+    <script src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+  	<link type="text/css" rel="stylesheet" href="mycss.css">
+ </head>
 <body>
 	<div id="username">
 		<input type="text" name="usernameTxt" /> <input type="button" name="setUsername" value="Set Username" />
@@ -11,45 +12,104 @@
 	<div id="sendChat" style="display:none;">
 		<input type="text" name="chatTxt" /> <input type="button" name="sendBtn" value="Send" />
 	</div>
+	<div id="buddyList" style="height:500px;width:100px;border: 2px solid black">
+		<div id="innerList"></div>
+	</div>
+	<div id="translationWindow" style="display:none;	position:absolute;
+	right:0px;
+	bottom:0px;
+	border:1px solid black;
+	height:200px;
+	width:200px;">
+		<div id="chatWindow" style="border:1px solid black;height:30px;width:180px;"></div>
+		<textarea id="chatText" rows="4" cols="20"></textarea>
+	</div>
 	<br />
     <div id="content"></div>
     <script>    
-        $(document).ready(function() {
-			var username = "anonymous";
-			
-			$('input[name=setUsername]').click(function(){
-				if($('input[name=usernameTxt]').val() != ""){
-					username = $('input[name=usernameTxt]').val();
-					var msg = {type:'setUsername',user:username};
-					socket.json.send(msg);
-				}
-				$('#username').slideUp("slow",function(){
-					$('#sendChat').slideDown("slow");
+      $(document).ready(function() {
+				var username = "anonymous";
+				var blake = {}
+       	window.blake = blake
+				$('input[name=setUsername]').click(function(){
+					if($('input[name=usernameTxt]').val() != ""){
+						username = $('input[name=usernameTxt]').val();
+						var msg = {type:'setUsername',user:username};
+						blake.from = username
+						socket.json.send(msg);
+					}
+					$('#username').slideUp("slow",function(){
+						$('#sendChat').slideDown("slow");
+					});
 				});
-			});
-			
-            var socket = new io.connect('http://localhost');
-            var content = $('#content');
+				
+	      var socket = new io.connect('http://localhost');
+	      window.socket = socket
+	      var content = $('#content');
 
-            socket.on('connect', function() {
-				console.log("Connected");
-            });
+	      socket.on('connect', function() {
+					console.log("Connected");
+	      });
 
-            socket.on('message', function(message){
-                content.append(message + '<br />');
-            }) ;
+	      socket.on('message', function(message){
+	          content.append(message + '<br />');
+	      }) ;
 
-            socket.on('disconnect', function() {
-                console.log('disconnected');
-                content.html("<b>Disconnected!</b>");
-            });
-
-			$("input[name=sendBtn]").click(function(){
-				var msg = {type:'chat',message:username + " : " +  $("input[name=chatTxt]").val()}
-				socket.json.send(msg);
-				$("input[name=chatTxt]").val("");
-			});
-        });
-    </script>
+	      socket.on('disconnect', function() {
+	          console.log('disconnected');
+	          content.html("<b>Disconnected!</b>");
+	      });
+	      socket.on("updateBuddyList", function(user) {
+	      	updateBuddy(user);
+	      	addListener(user);
+	      })
+	      socket.on("newBuddyList", function(users) {
+	      	if (users.length > 1) {
+	      		$("#innerList").empty()
+		      	for(var i = 0; i < users.length; i++) {
+							var element = "<div id=" + users[i] + ">" + users[i] + "</div>"
+		        	$("#innerList").append(element);
+		        	addListener(users[i]);
+		      	}
+		      }
+		      else {
+		      	updateBuddy(users);
+		      }
+	      })
+	      socket.on("privateMessage", function(message) {
+	      	$("#translationWindow").slideDown("slow");
+	      	var element = "<div>" + message.text + "</div>";
+	      	$("#chatWindow").append(element);
+	      	blake.to = message.from;
+	      	blake.from = message.to;
+	      })
+	      function updateBuddy(user) {
+					var element = "<div id=" + user + ">" + user + "</div>"
+	      	$("#innerList").append(element);
+	      }
+	      function addListener(user) {
+	      	$("#" + user).click(function(e) {
+	      		$("#translationWindow").slideDown("slow");
+	      		blake.to = $(this).attr("id");
+	      	});
+	      }
+				$("input[name=sendBtn]").click(function(){
+					var msg = {type:'chat',message:username + " : " +  $("input[name=chatTxt]").val()}
+					socket.json.send(msg);
+					$("input[name=chatTxt]").val("");
+				});
+				$("#translationWindow").on("keydown", function(e) {
+			    if (e.keyCode == 13) {
+		        var text = $("#chatText").val();
+		        var msg = {
+		        	text : text,
+		        	to : blake.to,
+		        	from : blake.from
+		        }
+			    	socket.json.emit("privateMessage", msg);
+			    }
+				})
+    	});
+  	</script>
 </body>
 </html>

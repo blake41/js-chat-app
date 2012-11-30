@@ -19,42 +19,48 @@ function handler (req, res) {
   });
 }
 
-//If you are using RedisToGo with Heroku
-if (process.env.REDISTOGO_URL) {
-	var rtg   = require("url").parse(process.env.REDISTOGO_URL);
-	var redis1 = require("redis").createClient(rtg.port, rtg.hostname);
-	var redis2 = require("redis").createClient(rtg.port, rtg.hostname);
-	var redis3 = require("redis").createClient(rtg.port, rtg.hostname);
 
-	redis1.auth(rtg.auth.split(":")[1]);
-	redis2.auth(rtg.auth.split(":")[1]);
-	redis3.auth(rtg.auth.split(":")[1]);
-} else {
-	//If you are using your own Redis server
-  	var redis1 = require("redis").createClient();
-	var redis2 = require("redis").createClient();
-	var redis3 = require("redis").createClient();
-}
+var redis1 = require("redis").createClient();
+var redis2 = require("redis").createClient();
+var redis3 = require("redis").createClient();
+redis3.del("onlineUsers")
 
+count = 0;
+var users = {}
 io.sockets.on('connection', function (client) {
-	
+	count++;
 	redis1.subscribe("emrchat");
-	
+	client.object_id = count
+	console.log("client" + count + " created")
+// 3. redis 1 gets the message event because it's subscribed
+// we have 3 instances of client and each time we initiate one we create another callback on 1 instance of
+// redis 1.  so we have an array of callbacks for the message event like [clien1.send, client2.send, clienti.send]
     redis1.on("message", function(channel, message) {
+				console.log("callback for client" + client.object_id)
         client.send(message);
     });
 
+// 1. the html form sends a message via the socket and here's our callback
     client.on('message', function(msg) {
 		console.log(msg);
 		if(msg.type == "chat"){
+// 2. the 2nd instance of redis publishes the message
+			console.log('redis publish')
 			redis2.publish("emrchat",msg.message);	
 		}
 		else if(msg.type == "setUsername"){
-			redis2.publish("emrchat", "A New User is connected : " + msg.user);
+			users[msg.user] = client.id
 			redis3.sadd("onlineUsers",msg.user);
+			client.broadcast.emit("updateBuddyList", msg.user)
+			redis3.smembers("onlineUsers", function(err, members) {
+				client.emit("newBuddyList", members)				
+			})
 		}
     });
-
+    client.on("privateMessage", function(message) {
+    	var socketId = users[message.to]
+    	io.sockets.socket(socketId).emit("privateMessage", message)
+    })
     client.on('disconnect', function() {
         redis1.quit();
         redis2.publish("emrchat","User is disconnected : " + client.id);

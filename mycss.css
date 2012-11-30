@@ -1,0 +1,9 @@
+#translationWindow {
+	position:absolute;
+	right:0px;
+	bottom:0px;
+	border:1px solid black;
+	height:200px;
+	width:200px;
+	display:none;
+}
