@@ -21,8 +21,8 @@
 	border:1px solid black;
 	height:200px;
 	width:200px;">
-		<div id="chatWindow" style="border:1px solid black;height:135px;width:196px;"></div>
-		<textarea id="chatText" rows="4" cols="25" style="position:relative;"></textarea>
+		<div id="chatWindow" style="border:1px solid black;height:135px;width:196px;overflow:scroll;"></div>
+		<textarea id="chatText" rows="4" cols="25" style="position:relative;overflow:scroll;"></textarea>
 	</div>
 	<br />
     <div id="content"></div>
@@ -43,7 +43,7 @@
 					});
 				});
 				
-	      var socket = new io.connect('10.242.11.250');
+	      var socket = new io.connect('192.168.1.75');
 	      window.socket = socket
 	      var content = $('#content');
 
