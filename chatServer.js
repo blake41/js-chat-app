@@ -25,45 +25,6 @@ function handler(req, res) {
   });
 }
 
-var speakMessage = function(message) {
-  var formattedMessage = message.text.replace(/ /g, "_"),
-    encodedMessage = escape(message.text),
-    url = "http://" + senderIP + ":4567/say/" + encodedMessage + "";
-  
-  // need to figure out what encoding i'm getting back from bing and fix the escaping
-  request.get({
-    url : url,
-  }, function(error) {
-    console.log(error);
-  })   
-}
-
-var setUsername = function(msg) {
-  if(msg.type == "setUsername"){
-    users[msg.user] = {
-      clientId : client.id,
-      clientIP : client.handshake.address.address
-    }
-    redis3.sadd("onlineUsers",msg.user);
-    client.broadcast.emit("updateBuddyList", msg.user)
-    redis3.smembers("onlineUsers", function(err, members) {
-      client.emit("newBuddyList", members)        
-    })
-  }
-}
-var translateAndSend = function(message) {
-  var socketId = users[message.to]['clientId'],
-      senderIP = users[message.to]['clientIP'],
-      translatedText = translate(message.text)
-  
-  client.set("name", message.from)
-  
-  message.text = translatedText
-
-  io.sockets.socket(socketId).emit("privateMessage", message)
-  sayMessage(message)     
-}
-
 var redis3 = require("redis").createClient();
 // clear out any cruft left over in the db
 redis3.del("onlineUsers")
@@ -72,8 +33,40 @@ var users = {}
 
 io.sockets.on('connection', function (client) {
 // 1. the html form sends a message via the socket and here's our callback
-    client.on('message', setUsername);
-    client.on("privateMessage", translateAndSend)
+    client.on('message', function(msg) {
+      if(msg.type == "setUsername"){
+        users[msg.user] = {
+          clientId : client.id,
+          clientIP : client.handshake.address.address
+        }
+        redis3.sadd("onlineUsers",msg.user);
+        client.broadcast.emit("updateBuddyList", msg.user)
+        redis3.smembers("onlineUsers", function(err, members) {
+          client.emit("newBuddyList", members)        
+        })
+      }
+    });
+    client.on("privateMessage", function(message) {
+      var socketId = users[message.to]['clientId'],
+          senderIP = users[message.to]['clientIP'],
+          translatedText = translate(message.text)
+      
+      client.set("name", message.from)
+      
+      message.text = translatedText
+
+      io.sockets.socket(socketId).emit("privateMessage", message)
+      var formattedMessage = message.text.replace(/ /g, "_"),
+        encodedMessage = escape(message.text),
+        url = "http://" + senderIP + ":4567/say/" + encodedMessage + "";
+      
+      // need to figure out what encoding i'm getting back from bing and fix the escaping
+      request.get({
+        url : url,
+      }, function(error) {
+        console.log(error);
+      })    
+    })
     client.on('disconnect', function() {
       client.get('name', function(err, name) {
         redis3.srem("onlineUsers", name)
