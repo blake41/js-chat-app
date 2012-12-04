@@ -7,9 +7,9 @@ var app = require('http').createServer(handler)
   , host = process.env.host;
 
 console.log("Listening on " + host + ":" + port);
-app.listen(port, "10.242.11.250");
+app.listen(port, host);
 
-var handler = function (req, res) {
+function handler(req, res) {
   console.log("about to read the index")
   fs.readFile(__dirname + '/index.html',
   function (err, data) {
@@ -41,7 +41,7 @@ var speakMessage = function(message) {
 var setUsername = function(msg) {
   if(msg.type == "setUsername"){
     users[msg.user] = {
-      clientId :client.id,
+      clientId : client.id,
       clientIP : client.handshake.address.address
     }
     redis3.sadd("onlineUsers",msg.user);
