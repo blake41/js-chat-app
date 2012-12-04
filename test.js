@@ -69,4 +69,4 @@
 // 	return 7
 // }
 
-console.log(ENV['variable'])
+console.log(process.env.say)
