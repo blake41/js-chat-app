@@ -69,4 +69,15 @@
 // 	return 7
 // }
 
-console.log(process.env.say)
+var redis = require('redis').createClient()
+redis.hgetall("token", function(err, reply) {console.log(reply)})
+
+
+
+
+
+
+
+
+
+// console.log(process.env.say)
